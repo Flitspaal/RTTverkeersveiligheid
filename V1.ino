@@ -103,6 +103,10 @@ void controllLCD(float s, float r) {
         lcd.print("---!!---");
         knipper(roodLicht, 200);
     }
+    if(uitgeschakeld && risicoFase == false){
+      lcd.setCursor(0,2);
+      lcd.print("uit");      
+    }
   delay(200);
 }
 
@@ -161,5 +165,6 @@ void drukKnop(){
     uitgeschakeld = false;
   } else {
     uitgeschakeld = true;
+    risicoFase = false;
   }
 }
