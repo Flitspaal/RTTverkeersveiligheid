@@ -1,6 +1,8 @@
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h> //LCD i2c lib
 
+// HET VERKEERSLICHT DAT JE SIMULEERT IS HET STOPLICHT VAN DE PERSOON DIE AANGEREDEN KAN WORDEN!!! niet van degene die door rood gaat rijden dus
+
 //VERANDER DEZE PINNEN NAAR DE JUISTE VOOR JOU MICROCONTROLLER
 #define POTMETER A0
 #define warning 30
@@ -96,7 +98,7 @@ void controllLCD(float s, float r) {
   lcd.setCursor(14,1);
   lcd.print("M");
   
-    if(r>warning && risicoFase == true || uitgeschakeld == true){ // als remafstand groter is dan 30 geef dan waarschuwing
+    if(r>warning && risicoFase == true){ // als remafstand groter is dan 30 geef dan waarschuwing
         lcd.setCursor(0,2);
         lcd.print("---!!---");
         knipper(roodLicht, 200);
