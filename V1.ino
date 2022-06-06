@@ -3,6 +3,7 @@
 
 #define POTMETER A0
 #define warning 30
+#define knopPin D4
 
 //Defines voor de stoplicht pins
 // SPECIFIEK VOOR DE WEMOS, AANPASSEN DUS
@@ -14,17 +15,25 @@ int roodLicht = 15;
 
 //fases verkeerslichten
 bool uitgeschakeld = false;
+
 bool roodFase = false;
 int groenTijd = 6000 ;
 int oranjeTijd = 4500;        //tijd van oranje knipperen, 80km/h weg = 4.5 sec
 int roodTijd = 6000;
 int cyclusTijd = groenTijd + oranjeTijd + roodTijd;
+const int knipperInterval = 500;
 
+//variabelen verkeerslichten
+int oranjeState = LOW;
+unsigned long laatsteKnipper = 0;
 unsigned long timer;
 
+//PROTOTYPES
 double remWeg(double);
 double potmeter();
 void controllLCD(float s, float r);
+void stoplicht();
+void uitStand();
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 
@@ -41,22 +50,32 @@ void setup() {
 
   pinMode(groenLicht, OUTPUT);
   pinMode(oranjeLicht, OUTPUT);
-  pinMode(roodLicht, OUTPUT);  
+  pinMode(roodLicht, OUTPUT);
+
+  pinMode(knopPin, INPUT_PULLUP);
 }
 
 void loop(){
- 
-
   double p = potmeter(); // waarde van de potmeter
   double r = remWeg(p); // remweg berekenen
-  Serial.print(r);
-  Serial.println(" m");
   controllLCD(p,r);
-  stoplicht();
+
+  boolean knopIn = !digitalRead(knopPin);
+  if(knopIn){
+    drukKnop();
+    Serial.println("knop ingedrukt");
+  }
+  
+  if (!uitgeschakeld) {
+    stoplicht();
+  } else {
+    uitStand();
+  }
   if (millis() - timer > cyclusTijd) {
     timer = millis();
+    
   }
-
+  
 }
 
 double remWeg(double v){ //calculates remweg
@@ -67,8 +86,6 @@ double remWeg(double v){ //calculates remweg
 double potmeter(){
   double v = analogRead(POTMETER);
   double temp = v / 6.83;
-  Serial.print(temp);
-  Serial.println(" km/u");
   return temp;
 }
 
@@ -85,7 +102,7 @@ void controllLCD(float s, float r) {
   lcd.setCursor(14,1);
   lcd.print("M");
   
-    if(r>warning && roodFase == true){ // als remafstand groter is dan 30 geef dan waarschuwing
+    if(r>warning && roodFase == true || uitgeschakeld == true){ // als remafstand groter is dan 30 geef dan waarschuwing
         lcd.setCursor(0,2);
         lcd.print("---!!---");
     }
@@ -117,5 +134,31 @@ void stoplicht() {
     digitalWrite(roodLicht, HIGH);
     roodFase = true; 
   }
+}
 
+//situatie waarbij de verkeerslichten knipperen (uit/storing)
+void uitStand() {
+  digitalWrite(groenLicht, LOW);
+  digitalWrite(roodLicht, LOW);
+  unsigned long currentMillis = millis(); //onthoud huidige tijd
+
+  //check of huidige tijd langer is dan knipperinterval, zo ja flip dan de ledstatus
+  if (currentMillis - laatsteKnipper >= knipperInterval) {
+    laatsteKnipper = currentMillis; //verander oude tijd naar huidige tijd
+    if (oranjeState == LOW) {
+      oranjeState = HIGH;
+    } else {
+      oranjeState = LOW;
+    }
+    digitalWrite(oranjeLicht, oranjeState);
+  }
+}
+
+void drukKnop(){
+  if(uitgeschakeld){
+    uitgeschakeld = false;
+  } else {
+    uitgeschakeld = true;
+  }
+  
 }
