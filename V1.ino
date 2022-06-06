@@ -1,22 +1,17 @@
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h> //LCD i2c lib
 
+//VERANDER DEZE PINNEN NAAR DE JUISTE VOOR JOU MICROCONTROLLER
 #define POTMETER A0
 #define warning 30
 #define knopPin D4
-
-//Defines voor de stoplicht pins
-// SPECIFIEK VOOR DE WEMOS, AANPASSEN DUS
-
-//VERKEERSLICHTEN
-int groenLicht = 12;
-int oranjeLicht = 13;
-int roodLicht = 15;
+#define groenLicht 12
+#define oranjeLicht 13
+#define roodLicht 15
 
 //fases verkeerslichten
 bool uitgeschakeld = false;
-
-bool roodFase = false;
+bool risicoFase = false;
 int groenTijd = 6000 ;
 int oranjeTijd = 4500;        //tijd van oranje knipperen, 80km/h weg = 4.5 sec
 int roodTijd = 6000;
@@ -24,7 +19,7 @@ int cyclusTijd = groenTijd + oranjeTijd + roodTijd;
 const int knipperInterval = 500;
 
 //variabelen verkeerslichten
-int oranjeState = LOW;
+int ledState = LOW;
 unsigned long laatsteKnipper = 0;
 unsigned long timer;
 
@@ -34,6 +29,7 @@ double potmeter();
 void controllLCD(float s, float r);
 void stoplicht();
 void uitStand();
+void knipper(int led, int interval);
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 
@@ -73,9 +69,7 @@ void loop(){
   }
   if (millis() - timer > cyclusTijd) {
     timer = millis();
-    
   }
-  
 }
 
 double remWeg(double v){ //calculates remweg
@@ -102,9 +96,10 @@ void controllLCD(float s, float r) {
   lcd.setCursor(14,1);
   lcd.print("M");
   
-    if(r>warning && roodFase == true || uitgeschakeld == true){ // als remafstand groter is dan 30 geef dan waarschuwing
+    if(r>warning && risicoFase == true || uitgeschakeld == true){ // als remafstand groter is dan 30 geef dan waarschuwing
         lcd.setCursor(0,2);
         lcd.print("---!!---");
+        knipper(roodLicht, 200);
     }
   delay(200);
 }
@@ -116,7 +111,7 @@ void stoplicht() {
     digitalWrite(groenLicht, HIGH);
     digitalWrite(oranjeLicht, LOW);
     digitalWrite(roodLicht, LOW);
-    roodFase = false;
+    risicoFase = true;
   }
 
 //lichten op oranje
@@ -124,7 +119,7 @@ void stoplicht() {
     digitalWrite(groenLicht, LOW);
     digitalWrite(oranjeLicht, HIGH);
     digitalWrite(roodLicht, LOW);
-    roodFase = true;
+    risicoFase = false;
   }
 
 //lichten op rood
@@ -132,7 +127,7 @@ void stoplicht() {
     digitalWrite(groenLicht, LOW);
     digitalWrite(oranjeLicht, LOW);
     digitalWrite(roodLicht, HIGH);
-    roodFase = true; 
+    risicoFase = false; 
   }
 }
 
@@ -140,17 +135,22 @@ void stoplicht() {
 void uitStand() {
   digitalWrite(groenLicht, LOW);
   digitalWrite(roodLicht, LOW);
+  knipper(oranjeLicht, knipperInterval);
+}
+
+//functie om led te laten knipperen
+void knipper(int led, int interval){
   unsigned long currentMillis = millis(); //onthoud huidige tijd
 
   //check of huidige tijd langer is dan knipperinterval, zo ja flip dan de ledstatus
-  if (currentMillis - laatsteKnipper >= knipperInterval) {
+  if (currentMillis - laatsteKnipper >= interval) {
     laatsteKnipper = currentMillis; //verander oude tijd naar huidige tijd
-    if (oranjeState == LOW) {
-      oranjeState = HIGH;
+    if (ledState == LOW) {
+      ledState = HIGH;
     } else {
-      oranjeState = LOW;
+      ledState = LOW;
     }
-    digitalWrite(oranjeLicht, oranjeState);
+    digitalWrite(led, ledState);
   }
 }
 
@@ -160,5 +160,4 @@ void drukKnop(){
   } else {
     uitgeschakeld = true;
   }
-  
 }
