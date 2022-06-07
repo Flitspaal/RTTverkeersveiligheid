@@ -3,6 +3,12 @@
 
 // HET VERKEERSLICHT DAT JE SIMULEERT IS HET STOPLICHT VAN DE PERSOON DIE AANGEREDEN KAN WORDEN!!! niet van degene die door rood gaat rijden dus
 
+//TODO
+//vertraging berekenen aan de hand van afstandssensor (2x2 of meer meten en afstand over tijd berekenen)
+//distance meerekenen in de door rood rij kans
+//2e stoplicht die de rood fase bepaalt voor het te waarschuwen stoplicht
+//variabele die de snelheid vd weg aangeeft/geeltijd aanpast
+
 //VERANDER DEZE PINNEN NAAR DE JUISTE VOOR JOU MICROCONTROLLER
 #define POTMETER A0
 #define warning 30
