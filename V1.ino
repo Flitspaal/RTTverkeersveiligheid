@@ -10,6 +10,8 @@
 #define groenLicht 12
 #define oranjeLicht 13
 #define roodLicht 15
+#define echoPin 2 // attach pin D2 Arduino to pin Echo of HC-SR04
+#define trigPin 3 //attach pin D3 Arduino to pin Trig of HC-SR04
 
 //fases verkeerslichten
 bool uitgeschakeld = false;
@@ -25,6 +27,10 @@ int ledState = LOW;
 unsigned long laatsteKnipper = 0;
 unsigned long timer;
 
+//variabelen afstandssensor
+long duration;  // variable for the duration of sound wave travel
+int distance;   // variable for the distance measurement in cm
+
 //PROTOTYPES
 double remWeg(double);
 double potmeter();
@@ -32,28 +38,37 @@ void controllLCD(float s, float r);
 void stoplicht();
 void uitStand();
 void knipper(int led, int interval);
+void checkAfstand();
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 
 void setup() {
   Serial.begin(9600);
 
+  //LCD setup
   lcd.begin();  
   lcd.backlight();
   lcd.print("INFO");
   lcd.setCursor(0,1);
   lcd.print("Screen");
 
+  //setup timer and pins voor verkeerslichten
   timer = millis();
-
   pinMode(groenLicht, OUTPUT);
   pinMode(oranjeLicht, OUTPUT);
   pinMode(roodLicht, OUTPUT);
 
+  //setup knop voor switchen tussen verkeerslicht modus
   pinMode(knopPin, INPUT_PULLUP);
+
+  //setup pins voor afstandssensor
+  pinMode(trigPin, OUTPUT); // Sets the trigPin as an OUTPUT
+  pinMode(echoPin, INPUT); // Sets the echoPin as an INPUT
 }
 
 void loop(){
+  checkAfstand();
+  
   double p = potmeter(); // waarde van de potmeter
   double r = remWeg(p); // remweg berekenen
   controllLCD(p,r);
@@ -86,7 +101,6 @@ double potmeter(){
 }
 
 void controllLCD(float s, float r) {
-
   lcd.clear();// clear previous values from screen
   lcd.print("KM/U");
   lcd.setCursor(7,0);
@@ -111,7 +125,6 @@ void controllLCD(float s, float r) {
 }
 
 void stoplicht() {
-
 //lichten op groen
   if (millis() - timer < groenTijd) { 
     digitalWrite(groenLicht, HIGH);
@@ -167,4 +180,19 @@ void drukKnop(){
     uitgeschakeld = true;
     risicoFase = false;
   }
+}
+
+//https://create.arduino.cc/projecthub/abdularbi17/ultrasonic-sensor-hc-sr04-with-arduino-tutorial-327ff6 
+void checkAfstand(){
+    // Clears the trigPin condition
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  // Sets the trigPin HIGH (ACTIVE) for 10 microseconds
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  // Reads the echoPin, returns the sound wave travel time in microseconds
+  duration = pulseIn(echoPin, HIGH);
+  // Calculating the distance
+  distance = duration * 0.034 / 2; // Speed of sound wave divided by 2 (go and back)
 }
