@@ -17,12 +17,15 @@
 //W = Wegpiraat aka die door rood gaat rijden
 #define POTMETER A0
 #define warning 30
-#define knopPin D4
-#define groenLichtS 12
-#define oranjeLichtS 13
-#define roodLichtS 15
-#define echoPin 13 // attach pin D7 Arduino to pin Echo of HC-SR04
-#define trigPin 15 //attach pin D8 Arduino to pin Trig of HC-SR04
+//#define knopPin D4
+#define groenLichtS 0  //verkeerslichten voor de te waarschuwen kant
+#define oranjeLichtS 4
+#define roodLichtS 5
+#define groenLichtW 12    //verkeerslicht voor de kant die door rood gaat rijden
+#define oranjeLichtW 13
+#define roodLichtW 15
+#define echoPin 10 // attach pin D7 Arduino to pin Echo of HC-SR04
+#define trigPin 11 //attach pin D8 Arduino to pin Trig of HC-SR04
 
 //fases verkeerslichten
 bool uitgeschakeld = false;
@@ -49,6 +52,7 @@ void controllLCD(float s, float r);
 void stoplicht();
 void uitStand();
 void knipper(int led, int interval);
+void knipper(int led, int led2, int interval);
 void checkAfstand();
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);
@@ -68,6 +72,9 @@ void setup() {
   pinMode(groenLichtS, OUTPUT);
   pinMode(oranjeLichtS, OUTPUT);
   pinMode(roodLichtS, OUTPUT);
+  pinMode(groenLichtW, OUTPUT);
+  pinMode(oranjeLichtW, OUTPUT);
+  pinMode(roodLichtW, OUTPUT);
 
   //setup knop voor switchen tussen verkeerslicht modus
   pinMode(knopPin, INPUT_PULLUP);
@@ -80,8 +87,8 @@ void setup() {
 void loop() {
   checkAfstand();
 
-
   double p = potmeter(); // waarde van de potmeter
+
   double r = remWeg(p); // remweg berekenen
   controllLCD(p, r);
 
@@ -96,7 +103,7 @@ void loop() {
   } else {
     uitStand();
   }
-  if (millis() - timer > cyclusTijd) {
+  if (millis() - timer > (cyclusTijd + oranjeTijd)) {
     timer = millis();
   }
 }
@@ -137,28 +144,57 @@ void controllLCD(float s, float r) {
 }
 
 void stoplicht() {
-  //lichten op groen
+  //lichten slachtoffer op groen
   if (millis() - timer < groenTijd) {
     digitalWrite(groenLichtS, HIGH);
     digitalWrite(oranjeLichtS, LOW);
     digitalWrite(roodLichtS, LOW);
     risicoFase = true;
+
+    digitalWrite(groenLichtW, LOW);
+    digitalWrite(oranjeLichtW, LOW);
+    digitalWrite(roodLichtW, HIGH);
   }
 
-  //lichten op oranje
+  //lichten slachtoffer op oranje
   if (millis() - timer > groenTijd && millis() - timer < (groenTijd + oranjeTijd)) {
     digitalWrite(groenLichtS, LOW);
     digitalWrite(oranjeLichtS, HIGH);
     digitalWrite(roodLichtS, LOW);
-    risicoFase = false;
+    risicoFase = true;
+
+    digitalWrite(groenLichtW, LOW);
+    digitalWrite(oranjeLichtW, LOW);
+    digitalWrite(roodLichtW, HIGH);
   }
 
-  //lichten op rood
+  //lichten slachtoffer op rood, aanrijder op groen
   if (millis() - timer > (groenTijd + oranjeTijd) && millis() - timer < cyclusTijd) {
     digitalWrite(groenLichtS, LOW);
     digitalWrite(oranjeLichtS, LOW);
     digitalWrite(roodLichtS, HIGH);
     risicoFase = false;
+
+    digitalWrite(groenLichtW, HIGH);
+    digitalWrite(oranjeLichtW, LOW);
+    digitalWrite(roodLichtW, LOW);
+  }
+
+  // slachtoffer rood, aanrijder groen -> oranje
+  if ((millis() - timer > cyclusTijd) && (millis() - timer < (cyclusTijd + oranjeTijd))) {
+    digitalWrite(groenLichtS, LOW);
+    digitalWrite(oranjeLichtS, LOW);
+    digitalWrite(roodLichtS, HIGH);
+    risicoFase = false;
+
+    digitalWrite(groenLichtW, LOW);
+    digitalWrite(oranjeLichtW, HIGH);
+    digitalWrite(roodLichtW, LOW);
+
+    //na een halve geeltijd van het stoplicht een waarschuwing geven aan het stoplicht dat zo op groen gaat
+    if((millis() - timer > (cyclusTijd + (0.5*oranjeTijd))) && (millis() - timer < (cyclusTijd + oranjeTijd))){
+      risicoFase = true;
+    }
   }
 }
 
@@ -166,7 +202,7 @@ void stoplicht() {
 void uitStand() {
   digitalWrite(groenLichtS, LOW);
   digitalWrite(roodLichtS, LOW);
-  knipper(oranjeLichtS, knipperInterval);
+  knipper(oranjeLichtS, oranjeLichtW, knipperInterval);
 }
 
 //functie om led te laten knipperen
@@ -182,6 +218,23 @@ void knipper(int led, int interval) {
       ledState = LOW;
     }
     digitalWrite(led, ledState);
+  }
+}
+
+//functie om 2 leds te laten knipperen
+void knipper(int led, int led2, int interval) {
+  unsigned long currentMillis = millis(); //onthoud huidige tijd
+
+  //check of huidige tijd langer is dan knipperinterval, zo ja flip dan de ledstatus
+  if (currentMillis - laatsteKnipper >= interval) {
+    laatsteKnipper = currentMillis; //verander oude tijd naar huidige tijd
+    if (ledState == LOW) {
+      ledState = HIGH;
+    } else {
+      ledState = LOW;
+    }
+    digitalWrite(led, ledState);
+    digitalWrite(led2, ledState);
   }
 }
 
