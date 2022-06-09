@@ -1,4 +1,4 @@
-#include <Wire.h> 
+#include <Wire.h>
 #include <LiquidCrystal_I2C.h> //LCD i2c lib
 
 // HET VERKEERSLICHT DAT JE SIMULEERT IS HET STOPLICHT VAN DE PERSOON DIE AANGEREDEN KAN WORDEN!!! niet van degene die door rood gaat rijden dus
@@ -13,14 +13,16 @@
 //variabele die de snelheid vd weg aangeeft/geeltijd aanpast
 
 //VERANDER DEZE PINNEN NAAR DE JUISTE VOOR JOU MICROCONTROLLER
+//S = slachtoffer
+//W = Wegpiraat aka die door rood gaat rijden
 #define POTMETER A0
 #define warning 30
 #define knopPin D4
-#define groenLicht 12
-#define oranjeLicht 13
-#define roodLicht 15
-#define echoPin 2 // attach pin D2 Arduino to pin Echo of HC-SR04
-#define trigPin 3 //attach pin D3 Arduino to pin Trig of HC-SR04
+#define groenLichtS 12
+#define oranjeLichtS 13
+#define roodLichtS 15
+#define echoPin 13 // attach pin D7 Arduino to pin Echo of HC-SR04
+#define trigPin 15 //attach pin D8 Arduino to pin Trig of HC-SR04
 
 //fases verkeerslichten
 bool uitgeschakeld = false;
@@ -55,17 +57,17 @@ void setup() {
   Serial.begin(9600);
 
   //LCD setup
-  lcd.begin();  
+  lcd.begin();
   lcd.backlight();
   lcd.print("INFO");
-  lcd.setCursor(0,1);
+  lcd.setCursor(0, 1);
   lcd.print("Screen");
 
   //setup timer and pins voor verkeerslichten
   timer = millis();
-  pinMode(groenLicht, OUTPUT);
-  pinMode(oranjeLicht, OUTPUT);
-  pinMode(roodLicht, OUTPUT);
+  pinMode(groenLichtS, OUTPUT);
+  pinMode(oranjeLichtS, OUTPUT);
+  pinMode(roodLichtS, OUTPUT);
 
   //setup knop voor switchen tussen verkeerslicht modus
   pinMode(knopPin, INPUT_PULLUP);
@@ -75,19 +77,20 @@ void setup() {
   pinMode(echoPin, INPUT); // Sets the echoPin as an INPUT
 }
 
-void loop(){
+void loop() {
   checkAfstand();
-  
+
+
   double p = potmeter(); // waarde van de potmeter
   double r = remWeg(p); // remweg berekenen
-  controllLCD(p,r);
+  controllLCD(p, r);
 
   boolean knopIn = !digitalRead(knopPin);
-  if(knopIn){
+  if (knopIn) {
     drukKnop();
     Serial.println("knop ingedrukt");
   }
-  
+
   if (!uitgeschakeld) {
     stoplicht();
   } else {
@@ -98,12 +101,12 @@ void loop(){
   }
 }
 
-double remWeg(double v){ //calculates remweg
- double temp = (((v/10)*(v/10))/2);
- return temp;
+double remWeg(double v) { //calculates remweg
+  double temp = (((v / 10) * (v / 10)) / 2);
+  return temp;
 }
 
-double potmeter(){
+double potmeter() {
   double v = analogRead(POTMETER);
   double temp = v / 6.83;
   return temp;
@@ -112,62 +115,62 @@ double potmeter(){
 void controllLCD(float s, float r) {
   lcd.clear();// clear previous values from screen
   lcd.print("KM/U");
-  lcd.setCursor(7,0);
+  lcd.setCursor(7, 0);
   lcd.print(s);
-  lcd.setCursor(0,1);
+  lcd.setCursor(0, 1);
   lcd.print("Remweg");
-  lcd.setCursor(7,1);
+  lcd.setCursor(7, 1);
   lcd.print(r);
-  lcd.setCursor(14,1);
+  lcd.setCursor(14, 1);
   lcd.print("M");
-  
-    if(r>warning && risicoFase == true){ // als remafstand groter is dan 30 geef dan waarschuwing
-        lcd.setCursor(0,2);
-        lcd.print("---!!---");
-        knipper(roodLicht, 200);
-    }
-    if(uitgeschakeld && risicoFase == false){
-      lcd.setCursor(0,2);
-      lcd.print("uit");      
-    }
+
+  if (r > warning && risicoFase == true) { // als remafstand groter is dan 30 geef dan waarschuwing
+    lcd.setCursor(0, 2);
+    lcd.print("---!!---");
+    knipper(roodLichtS, 200);
+  }
+  if (uitgeschakeld && risicoFase == false) {
+    lcd.setCursor(0, 2);
+    lcd.print("uit");
+  }
   delay(200);
 }
 
 void stoplicht() {
-//lichten op groen
-  if (millis() - timer < groenTijd) { 
-    digitalWrite(groenLicht, HIGH);
-    digitalWrite(oranjeLicht, LOW);
-    digitalWrite(roodLicht, LOW);
+  //lichten op groen
+  if (millis() - timer < groenTijd) {
+    digitalWrite(groenLichtS, HIGH);
+    digitalWrite(oranjeLichtS, LOW);
+    digitalWrite(roodLichtS, LOW);
     risicoFase = true;
   }
 
-//lichten op oranje
+  //lichten op oranje
   if (millis() - timer > groenTijd && millis() - timer < (groenTijd + oranjeTijd)) {
-    digitalWrite(groenLicht, LOW);
-    digitalWrite(oranjeLicht, HIGH);
-    digitalWrite(roodLicht, LOW);
+    digitalWrite(groenLichtS, LOW);
+    digitalWrite(oranjeLichtS, HIGH);
+    digitalWrite(roodLichtS, LOW);
     risicoFase = false;
   }
 
-//lichten op rood
+  //lichten op rood
   if (millis() - timer > (groenTijd + oranjeTijd) && millis() - timer < cyclusTijd) {
-    digitalWrite(groenLicht, LOW);
-    digitalWrite(oranjeLicht, LOW);
-    digitalWrite(roodLicht, HIGH);
-    risicoFase = false; 
+    digitalWrite(groenLichtS, LOW);
+    digitalWrite(oranjeLichtS, LOW);
+    digitalWrite(roodLichtS, HIGH);
+    risicoFase = false;
   }
 }
 
 //situatie waarbij de verkeerslichten knipperen (uit/storing)
 void uitStand() {
-  digitalWrite(groenLicht, LOW);
-  digitalWrite(roodLicht, LOW);
-  knipper(oranjeLicht, knipperInterval);
+  digitalWrite(groenLichtS, LOW);
+  digitalWrite(roodLichtS, LOW);
+  knipper(oranjeLichtS, knipperInterval);
 }
 
 //functie om led te laten knipperen
-void knipper(int led, int interval){
+void knipper(int led, int interval) {
   unsigned long currentMillis = millis(); //onthoud huidige tijd
 
   //check of huidige tijd langer is dan knipperinterval, zo ja flip dan de ledstatus
@@ -182,8 +185,8 @@ void knipper(int led, int interval){
   }
 }
 
-void drukKnop(){
-  if(uitgeschakeld){
+void drukKnop() {
+  if (uitgeschakeld) {
     uitgeschakeld = false;
   } else {
     uitgeschakeld = true;
@@ -191,9 +194,9 @@ void drukKnop(){
   }
 }
 
-//https://create.arduino.cc/projecthub/abdularbi17/ultrasonic-sensor-hc-sr04-with-arduino-tutorial-327ff6 
-void checkAfstand(){
-    // Clears the trigPin condition
+//https://create.arduino.cc/projecthub/abdularbi17/ultrasonic-sensor-hc-sr04-with-arduino-tutorial-327ff6
+void checkAfstand() {
+  // Clears the trigPin condition
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
   // Sets the trigPin HIGH (ACTIVE) for 10 microseconds
