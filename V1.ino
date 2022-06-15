@@ -13,19 +13,17 @@
 //variabele die de snelheid vd weg aangeeft/geeltijd aanpast
 
 //VERANDER DEZE PINNEN NAAR DE JUISTE VOOR JOU MICROCONTROLLER
-//S = slachtoffer
-//W = Wegpiraat aka die door rood gaat rijden
 #define POTMETER A0
 #define warning 30
-//#define knopPin D4
-#define groenLichtS 0  //verkeerslichten voor de te waarschuwen kant
-#define oranjeLichtS 4
-#define roodLichtS 5
+#define knopPin 5
+#define groenLichtS 2  //verkeerslichten voor de te waarschuwen kant
+#define oranjeLichtS 3
+#define roodLichtS 4
 #define groenLichtW 12    //verkeerslicht voor de kant die door rood gaat rijden
-#define oranjeLichtW 13
-#define roodLichtW 15
-#define echoPin 10 // attach pin D7 Arduino to pin Echo of HC-SR04
-#define trigPin 11 //attach pin D8 Arduino to pin Trig of HC-SR04
+#define oranjeLichtW 11
+#define roodLichtW 13
+#define echoPin 8 // attach pin D7 Arduino to pin Echo of HC-SR04
+#define trigPin 9 //attach pin D8 Arduino to pin Trig of HC-SR04
 
 //fases verkeerslichten
 bool uitgeschakeld = false;
@@ -53,7 +51,8 @@ void stoplicht();
 void uitStand();
 void knipper(int led, int interval);
 void knipper(int led, int led2, int interval);
-void checkAfstand();
+double checkAfstand();
+//double AfstandFormule();
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 
@@ -85,8 +84,6 @@ void setup() {
 }
 
 void loop() {
-  checkAfstand();
-
   double p = potmeter(); // waarde van de potmeter
 
   double r = remWeg(p); // remweg berekenen
@@ -130,8 +127,9 @@ void controllLCD(float s, float r) {
   lcd.print(r);
   lcd.setCursor(14, 1);
   lcd.print("M");
-
-  if (r > warning && risicoFase == true) { // als remafstand groter is dan 30 geef dan waarschuwing
+  int AFST = checkAfstand();
+  Serial.println(AFST);
+  if (r > AFST && risicoFase == true) { // als remafstand groter is dan 30 geef dan waarschuwing
     lcd.setCursor(0, 2);
     lcd.print("---!!---");
     knipper(roodLichtS, 200);
@@ -149,7 +147,7 @@ void stoplicht() {
     digitalWrite(groenLichtS, HIGH);
     digitalWrite(oranjeLichtS, LOW);
     digitalWrite(roodLichtS, LOW);
-    risicoFase = true;
+    risicoFase = true; //////////////////////////
 
     digitalWrite(groenLichtW, LOW);
     digitalWrite(oranjeLichtW, LOW);
@@ -161,7 +159,7 @@ void stoplicht() {
     digitalWrite(groenLichtS, LOW);
     digitalWrite(oranjeLichtS, HIGH);
     digitalWrite(roodLichtS, LOW);
-    risicoFase = true;
+    risicoFase = true; ///////////////////////////
 
     digitalWrite(groenLichtW, LOW);
     digitalWrite(oranjeLichtW, LOW);
@@ -202,6 +200,9 @@ void stoplicht() {
 void uitStand() {
   digitalWrite(groenLichtS, LOW);
   digitalWrite(roodLichtS, LOW);
+  digitalWrite(groenLichtW, LOW);
+  digitalWrite(roodLichtW, LOW);  
+
   knipper(oranjeLichtS, oranjeLichtW, knipperInterval);
 }
 
@@ -214,8 +215,10 @@ void knipper(int led, int interval) {
     laatsteKnipper = currentMillis; //verander oude tijd naar huidige tijd
     if (ledState == LOW) {
       ledState = HIGH;
+      risicoFase = true;
     } else {
       ledState = LOW;
+      risicoFase = true;
     }
     digitalWrite(led, ledState);
   }
@@ -248,7 +251,7 @@ void drukKnop() {
 }
 
 //https://create.arduino.cc/projecthub/abdularbi17/ultrasonic-sensor-hc-sr04-with-arduino-tutorial-327ff6
-void checkAfstand() {
+double checkAfstand() {
   // Clears the trigPin condition
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
@@ -259,5 +262,8 @@ void checkAfstand() {
   // Reads the echoPin, returns the sound wave travel time in microseconds
   duration = pulseIn(echoPin, HIGH);
   // Calculating the distance
-  distance = duration * 0.034 / 2; // Speed of sound wave divided by 2 (go and back)
+if ((duration * 0.034 / 2)<= 300){
+    distance = duration * 0.034 / 2; // Speed of sound wave divided by 2 (go and back)
+   }
+  return distance;
 }
